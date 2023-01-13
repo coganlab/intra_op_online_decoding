@@ -45,26 +45,27 @@ def test_read_info_rhd_wrapper(fs, num_chan):
 
 def test_read_timestamp():
     from RHXAcquisitionFilePerSignalType import (
-        read_timestamp, CHUNK_SIZE, read_info_rhd_wrapper)
+        read_timestamp, CHUNK_LENGTH, read_info_rhd_wrapper)
     rd = current + "/../../test_data"
     finfo = read_info_rhd_wrapper(rd, verbose=False)
     fs = finfo['frequency_parameters']['amplifier_sample_rate']
 
     with open(rd + "/time.dat", 'rb') as ts_id:
-        ts = read_timestamp(ts_id, finfo)
-    assert len(ts) == CHUNK_SIZE
+        ts = read_timestamp(ts_id, fs)
+    assert len(ts) == CHUNK_LENGTH*fs
     assert ts[0] == 0
     assert ts[1] == 1 / fs
-    assert ts[-1] == (CHUNK_SIZE - 1) / fs
+    assert ts[-1] == (CHUNK_LENGTH*fs - 1) / fs
 
 
 def test_read_amp_data():
     from RHXAcquisitionFilePerSignalType import (
-        read_amp_data, CHUNK_SIZE, read_info_rhd_wrapper)
+        read_amp_data, CHUNK_LENGTH, read_info_rhd_wrapper)
     rd = current + "/../../test_data"
     finfo = read_info_rhd_wrapper(rd, verbose=False)
+    fs = finfo['frequency_parameters']['amplifier_sample_rate']
     num_chan = len(finfo['amplifier_channels'])
 
     with open(rd + "/amplifier.dat", 'rb') as amp_id:
-        amp_data = read_amp_data(amp_id, finfo)
-    assert amp_data.shape == (num_chan, CHUNK_SIZE)
+        amp_data = read_amp_data(amp_id, finfo, fs)
+    assert amp_data.shape == (num_chan, CHUNK_LENGTH*fs)
