@@ -5,8 +5,6 @@ neural data from intra-op cases for the Cogan/Viventi Lab at Duke University.
 Author: Zac Spalding
 """
 
-# %%
-
 # np.fromfile in place of fread from matlab
 # (https://stackoverflow.com/questions/2146031/what-is-the-equivalent-of-fread-from-matlab-in-python)
 import numpy as np
@@ -66,62 +64,3 @@ def read_amp_data(amp_fid, fileinfo, offset=0):
                     dtype=np.int16).reshape(-1, num_chan).T
     d = d * MICROV_CONV
     return d
-
-# %%
-
-
-rd = "F:/intan_streaming_test/data_save_testing"
-fileinfo = read_info_rhd_wrapper(rd)
-
-ts_path = rd + '/time.dat'
-with open(ts_path, 'rb') as ts_id:
-    ts = read_timestamp(ts_id, fileinfo)
-
-amp_path = rd + '/amplifier.dat'
-with open(amp_path, 'rb') as amp_id:
-    amp_data = read_amp_data(amp_id, fileinfo)
-
-if __name__ == '__main__':
-    # %%
-    plt.plot(ts, amp_data[0, :].T)
-    plt.show()
-
-    # %%
-
-    rd = "F:/intan_streaming_test/data_save_testing"
-    fileinfo = read_info_rhd_wrapper(rd)
-    num_chan = len(fileinfo['amplifier_channels'])
-
-    ts_path = rd + '/time.dat'
-    ts_fid = open(ts_path, 'rb')
-
-    amp_path = rd + '/amplifier.dat'
-    amp_fid = open(amp_path, 'rb')
-
-    plotted_samples = 0
-
-    plt.ion()
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    amp_plot, = ax.plot([], [], 'r-')
-    ax.set_ylim([-1000, 1000])
-    ax.set_xlim([0, 1])
-
-    while True:
-        ts_size = int(os.path.getsize(ts_path) / 4)
-        amp_size = int(os.path.getsize(amp_path) / (2 * num_chan))
-
-        if min(ts_size, amp_size) - plotted_samples >= CHUNK_SIZE:
-            ts = read_timestamp(ts_fid, fileinfo)
-            amp_data = read_amp_data(amp_fid, fileinfo)
-
-            amp_plot.set_data(ts, amp_data[0, :])
-            ax.set_xlim(ts[0], ts[-1])
-
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-            plotted_samples += CHUNK_SIZE
-        else:
-            print('waiting for data')
-            time.sleep(0.01)
