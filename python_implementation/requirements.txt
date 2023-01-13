@@ -1,0 +1,6 @@
+pytest
+pytest-pycodestyle
+numpy
+matplotlib
+ipykernel
+keyboard
