@@ -4,4 +4,3 @@ __pycache__
 .conda
 .tmp.drivedownload
 .tmp.driveupload
-*.rhd
