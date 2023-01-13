@@ -1,0 +1,8 @@
+__pycache__
+.pytest_cache
+.vscode
+.conda
+.tmp.drivedownload
+.tmp.driveupload
+*.rhd
+test_data/
