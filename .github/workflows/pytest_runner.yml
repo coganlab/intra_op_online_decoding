@@ -17,4 +17,4 @@ jobs:
         pip install -r python_implementation/requirements.txt
     - name: Test with pytest
       run: |
-        pytest -v --pycodestyle --ignore=python_implementation/load_intan_rhd_format
+        pytest -v --pycodestyle --ignore=python_implementation/data_streaming/load_intan_rhd_format
