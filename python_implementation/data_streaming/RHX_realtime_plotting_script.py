@@ -6,7 +6,7 @@ import time
 import os
 import xml.etree.ElementTree as ET
 
-import RHXAcquisitionFilePerSignalType as rhx_acq
+import RHX_realtime_reader as rhx_acq
 
 rd = "F:/intan_streaming_test/data_save_testing"
 

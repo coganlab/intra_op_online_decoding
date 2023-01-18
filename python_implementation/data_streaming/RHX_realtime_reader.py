@@ -15,7 +15,6 @@ import xml.etree.ElementTree as ET
 
 from load_intan_rhd_format.load_intan_rhd_format import read_data
 
-
 MICROV_CONV = 0.195
 CHUNK_LENGTH = 1  # second(s)
 
