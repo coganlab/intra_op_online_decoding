@@ -61,16 +61,8 @@ class RHX_realtime_reader():
         return int(os.path.getsize(self.lowpass_path) /
                    (2 * self.num_chan))  # int16 = 2 bytes
 
-    def get_amp_data_filesize(self):
-        return int(os.path.getsize(self.amp_path) /
-                   (2 * self.num_chan))  # int16 = 2 bytes
-
     def create_timestamp_lp(self, num_samples, start=0):
         ts = np.arange(start, start + num_samples) / self.fs_down
-        return ts
-
-    def create_timestamp_amp(self, num_samples, start=0):
-        ts = np.arange(start, start + num_samples) / self.fs
         return ts
 
     def read_lowpass_data(self, data_fid, read_all=False):
@@ -78,17 +70,6 @@ class RHX_realtime_reader():
             read_len = -1
         else:
             read_len = int(self.chunk_len * self.fs_down * self.num_chan)
-
-        d = np.fromfile(data_fid, count=read_len,
-                        dtype=np.int16).reshape(-1, self.num_chan).T
-        d = d * self.MICROV_CONV
-        return d
-
-    def read_amp_data(self, data_fid, read_all=False):
-        if read_all:
-            read_len = -1
-        else:
-            read_len = int(self.chunk_len * self.fs * self.num_chan)
 
         d = np.fromfile(data_fid, count=read_len,
                         dtype=np.int16).reshape(-1, self.num_chan).T
@@ -108,19 +89,24 @@ class RHX_realtime_reader():
 
         if plot:
             plt.figure()
-            plt.plot(ts, amp_data[0, :].T)
+            plt.plot(ts, amp_data[0:5, :].T)
             plt.ylabel('Voltage (uV)')
             plt.xlabel('Time (s)')
             plt.show()
 
         return ts, amp_data
 
-    def realtime_acquire(self, plot=False, curr_plt=None, fig=None, ax=None):
-        ts_fid = open(self.ts_path, 'rb')
+    def realtime_acquire(self, plot=False):
         data_fid = open(self.lowpass_path, 'rb')
 
         if plot:
             plotted_samples = 0
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            amp_plot, = ax.plot([], [], 'r-')
+            ax.set_ylim([-1000, 1000])
+            ax.set_xlim([0, 1])
 
             count = 0
             while True:
@@ -128,28 +114,27 @@ class RHX_realtime_reader():
                 update_size = int(self.fs_down * self.chunk_len)
 
                 if amp_size - plotted_samples >= update_size:
+                    count = 0
                     amp_data = self.read_lowpass_data(data_fid)
                     ts = self.create_timestamp_lp(amp_data.shape[1],
-                                                  start=plotted_samples /
-                                                  self.fs_down)
+                                                  start=plotted_samples)
 
-                    curr_plt.set_data(ts, amp_data[0, :])
+                    amp_plot.set_data(ts, amp_data[0, :])
                     ax.set_xlim(ts[0], ts[-1])
 
                     fig.canvas.draw()
                     fig.canvas.flush_events()
                     plotted_samples += update_size
                 else:
-                    if count % 100 == 1:
+                    if (count + 1) % 100 == 0:
                         print('Waiting for data...')
-                    if count >= 1000:
+                    if count >= 500:
                         print('Timed out. Check that the Intan '
                               'software is still recording data.')
                         break
                     time.sleep(0.01)
                     count += 1
 
-        ts_fid.close()
         data_fid.close()
 
 
