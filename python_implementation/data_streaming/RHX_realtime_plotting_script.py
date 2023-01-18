@@ -4,20 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import os
-import xml.etree.ElementTree as ET
 
 import RHX_realtime_reader as rhx_acq
 
 rd = "F:/intan_streaming_test/data_save_testing"
+realtime_reader = rhx_acq.RHX_realtime_reader(recording_dir=rd)
 
 
-# %% Plot single chunk of data for first channel
+# %% Plot current data from first channel
 
-ts, amp_data = rhx_acq.acquire_data(rd)
+ts, amp_data = realtime_reader.current_acquire(plot=True)
 print(ts.shape, amp_data.shape)
-
-plt.plot(ts, amp_data[0, :].T)
-plt.show()
 
 # %% Determine write interval
 
@@ -63,15 +60,15 @@ plt.show()
 
 # %% Plot continuously updating data
 
-rd = "F:/intan_streaming_test/data_save_testing"
-fileinfo = rhx_acq.read_info_rhd_wrapper(rd)
-num_chan = len(fileinfo['amplifier_channels'])
-
+# amp_fid = open(realtime_reader.lowpass_path, 'rb')
+amp_path = rd + '/amplifier.dat'
+amp_fid = open(amp_path, 'rb')
 ts_path = rd + '/time.dat'
 ts_fid = open(ts_path, 'rb')
 
-amp_path = rd + '/amplifier.dat'
-amp_fid = open(amp_path, 'rb')
+fileinfo = rhx_acq.read_info_rhd_wrapper(rd + '/info.rhd')
+num_chan = len(fileinfo['amplifier_channels'])
+fs = fileinfo['frequency_parameters']['amplifier_sample_rate']
 
 plotted_samples = 0
 
@@ -87,23 +84,31 @@ count = 0
 while True:
     ts_size = int(os.path.getsize(ts_path) / 4)
     amp_size = int(os.path.getsize(amp_path) / (2 * num_chan))
+    # update_size = int(realtime_reader.chunk_len * realtime_reader.fs_down)
+    update_size = int(rhx_acq.CHUNK_LENGTH * fs)
 
-    if min(ts_size, amp_size) - plotted_samples >= rhx_acq.CHUNK_SIZE:
-        ts = rhx_acq.read_timestamp(ts_fid, fileinfo)
-        amp_data = rhx_acq.read_amp_data(amp_fid, fileinfo)
+    if min(ts_size, amp_size) - plotted_samples >= update_size:
+        ts = rhx_acq.read_timestamp(ts_fid, fs)
+        # amp_data = realtime_reader.read_amp_data(amp_fid, read_all=False)
+        amp_data = rhx_acq.read_amp_data(amp_fid, num_chan,
+                                         fs)
+        # ts = realtime_reader.create_timestamp_amp(amp_data.shape[1],
+        #                                           start=plotted_samples)
 
         amp_plot.set_data(ts, amp_data[0, :])
         ax.set_xlim(ts[0], ts[-1])
 
         fig.canvas.draw()
         fig.canvas.flush_events()
-        plotted_samples += rhx_acq.CHUNK_SIZE
+        plotted_samples += update_size
     else:
-        print('waiting for data')
-        if count == 1000:
+        if count % 100 == 1:
+            print('Waiting for data...')
+        if count >= 1000:
+            print('Timed out. Check that the Intan '
+                  'software is still recording data.')
             break
         time.sleep(0.01)
         count += 1
 
-ts_fid.close()
 amp_fid.close()
