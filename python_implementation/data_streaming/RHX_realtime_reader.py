@@ -102,6 +102,7 @@ class RHX_realtime_reader():
         if plot:
             plotted_samples = 0
 
+            plt.ion()
             fig = plt.figure()
             ax = fig.add_subplot(111)
             amp_plot, = ax.plot([], [], 'r-')
