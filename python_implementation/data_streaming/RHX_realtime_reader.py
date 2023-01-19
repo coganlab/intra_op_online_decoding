@@ -15,7 +15,7 @@ import tkinter as tk
 from tkinter import filedialog
 import xml.etree.ElementTree as ET
 
-from load_intan_rhd_format.load_intan_rhd_format import read_data
+from .load_intan_rhd_format.load_intan_rhd_format import read_data
 
 MICROV_CONV = 0.195
 CHUNK_LENGTH = 1  # second(s)
@@ -29,11 +29,14 @@ class RHX_realtime_reader():
         self.verbosity = verbosity
 
         if recording_dir is None:
-            recording_dir = get_recording_dir()
+            try:
+                recording_dir = get_recording_dir()
+            except FileNotFoundError:
+                print("No recording directory found. Please select one.")
         self.recording_dir = recording_dir
 
-        self.info_path = self.recording_dir + '/info.rhd'
-        self.settings_path = self.recording_dir + '/settings.xml'
+        # self.info_path = self.recording_dir + '/info.rhd'
+        # self.settings_path = self.recording_dir + '/settings.xml'
         self.ts_path = self.recording_dir + '/time.dat'
         self.amp_path = self.recording_dir + '/amplifier.dat'
         self.lowpass_path = self.recording_dir + '/lowpass.dat'
@@ -42,13 +45,13 @@ class RHX_realtime_reader():
         self.read_settings()
 
     def get_fileinfo(self, verbose=True):
-        fileinfo = read_info_rhd_wrapper(self.info_path, verbose=verbose)
+        fileinfo = read_info_rhd_wrapper(self.recording_dir, verbose=verbose)
         self.fileinfo = fileinfo
         self.fs = fileinfo['frequency_parameters']['amplifier_sample_rate']
         self.num_chan = len(fileinfo['amplifier_channels'])
 
     def read_settings(self):
-        settings_etree = parse_settings(self.settings_path)
+        settings_etree = parse_settings(self.recording_dir)
         if settings_etree is not False:
             downrate = get_downrate_from_settings(settings_etree)
             if downrate is not False:
@@ -57,7 +60,7 @@ class RHX_realtime_reader():
     def get_timestamp_filesize(self):
         return int(os.path.getsize(self.ts_path) / 4)  # int32 = 4 bytes
 
-    def get_lp_data_filesize(self):
+    def get_data_filesize(self):
         return int(os.path.getsize(self.lowpass_path) /
                    (2 * self.num_chan))  # int16 = 2 bytes
 
@@ -65,7 +68,7 @@ class RHX_realtime_reader():
         ts = np.arange(start, start + num_samples) / self.fs_down
         return ts
 
-    def read_lowpass_data(self, data_fid, read_all=False):
+    def read_amp_data(self, data_fid, read_all=False):
         if read_all:
             read_len = -1
         else:
@@ -76,12 +79,12 @@ class RHX_realtime_reader():
         d = d * self.MICROV_CONV
         return d
 
-    def current_acquire(self, plot=False):
+    def acquire_current(self, plot=False):
         ts_fid = open(self.ts_path, 'rb')
         data_fid = open(self.lowpass_path, 'rb')
 
         # read timestamp and amplifier data
-        amp_data = self.read_lowpass_data(data_fid, read_all=True)
+        amp_data = self.read_amp_data(data_fid, read_all=True)
         ts = self.create_timestamp_lp(amp_data.shape[1])
 
         ts_fid.close()
@@ -96,7 +99,7 @@ class RHX_realtime_reader():
 
         return ts, amp_data
 
-    def realtime_acquire(self, plot=False):
+    def acquire_realtime(self, plot=False):
         data_fid = open(self.lowpass_path, 'rb')
 
         if plot:
@@ -111,7 +114,7 @@ class RHX_realtime_reader():
 
             count = 0
             while True:
-                amp_size = self.get_lp_data_filesize()
+                amp_size = self.get_data_filesize()
                 update_size = int(self.fs_down * self.chunk_len)
 
                 if amp_size - plotted_samples >= update_size:
@@ -150,7 +153,14 @@ def get_recording_dir():
     return recording_dir
 
 
-def parse_settings(settings_path):
+def read_info_rhd_wrapper(recording_dir, verbose=True):
+    info_path = recording_dir + '/info.rhd'
+    fileinfo = read_data(info_path, verbose=verbose)
+    return fileinfo
+
+
+def parse_settings(recording_dir):
+    settings_path = recording_dir + '/settings.xml'
     if os.path.exists(settings_path):
         return ET.parse(settings_path)
     return False
@@ -163,22 +173,3 @@ def get_downrate_from_settings(settings_etree):
         if 'LowpassWaveformDownsampleRate' in gen_config.attrib:
             return int(gen_config.attrib['LowpassWaveformDownsampleRate'])
     return False
-
-
-def read_info_rhd_wrapper(info_path, verbose=True):
-    fileinfo = read_data(info_path, verbose=verbose)
-    return fileinfo
-
-
-def read_timestamp(ts_fid, fs, offset=0):
-    ts = np.fromfile(ts_fid, count=int(CHUNK_LENGTH*fs), offset=offset,
-                     dtype=np.int32)
-    ts = ts / fs
-    return ts
-
-
-def read_amp_data(amp_fid, num_chan, fs, offset=0):
-    d = np.fromfile(amp_fid, count=int(CHUNK_LENGTH*fs*num_chan),
-                    offset=offset, dtype=np.int16).reshape(-1, num_chan).T
-    d = d * MICROV_CONV
-    return d
