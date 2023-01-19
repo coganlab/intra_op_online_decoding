@@ -3,7 +3,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import os
 
 import RHX_realtime_reader as rhx_acq
 
@@ -12,12 +11,7 @@ realtime_reader = rhx_acq.RHX_realtime_reader(recording_dir=rd)
 
 # %% Determine write interval
 
-fileinfo = rhx_acq.read_info_rhd_wrapper(rd)
-num_chan = len(fileinfo['amplifier_channels'])
-ts_path = rd + '/time.dat'
-amp_path = rd + '/amplifier.dat'
-
-amp_size = rhx_acq.get_data_filesize(amp_path, num_chan)
+amp_timesteps = realtime_reader.get_data_filesize()
 
 write_len = 10000
 write_times = np.zeros(write_len)
@@ -25,12 +19,12 @@ write_amount = np.zeros(write_len)
 write_count = 0
 start = time.time()
 while write_count < write_len:
-    temp_amp_size = rhx_acq.get_data_filesize(amp_path, num_chan)
-    if temp_amp_size > amp_size:
+    temp_amp_timesteps = realtime_reader.get_data_filesize()
+    if temp_amp_timesteps > amp_timesteps:
         write_times[write_count] = time.time() - start
-        write_amount[write_count] = temp_amp_size - amp_size
+        write_amount[write_count] = temp_amp_timesteps - amp_timesteps
         start = time.time()
-        amp_size = temp_amp_size
+        amp_timesteps = temp_amp_timesteps
         write_count += 1
     else:
         time.sleep(0.001)
