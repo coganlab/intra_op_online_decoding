@@ -2,7 +2,7 @@ import pytest
 import os
 import xml.etree.ElementTree as ET
 
-from ..RHX_realtime_reader import RHX_realtime_reader
+from RHX_realtime_reader import RHX_realtime_reader
 
 current = os.path.dirname(os.path.realpath(__file__))
 test_data_dir = current + "/../../../test_data"
@@ -10,7 +10,7 @@ test_data_dir = current + "/../../../test_data"
 
 @pytest.mark.parametrize("fs, num_chan", [(20000, 1024)])
 def test_read_info_rhd_wrapper(fs, num_chan):
-    from ..RHX_realtime_reader import read_info_rhd_wrapper
+    from RHX_realtime_reader import read_info_rhd_wrapper
     fileinfo = read_info_rhd_wrapper(test_data_dir, verbose=False)
     assert fileinfo['frequency_parameters']['amplifier_sample_rate'] == fs
     assert len(fileinfo['amplifier_channels']) == num_chan
@@ -21,7 +21,7 @@ def test_read_info_rhd_wrapper(fs, num_chan):
                           (test_data_dir + "/info.rhd", bool)],
                          ids=['Settings present', 'No settings'])
 def test_parse_settings(recording_dir, expected):
-    from ..RHX_realtime_reader import parse_settings
+    from RHX_realtime_reader import parse_settings
     setting_info = parse_settings(recording_dir)
     assert type(setting_info) == expected
     if type(setting_info) == bool:
@@ -31,15 +31,15 @@ def test_parse_settings(recording_dir, expected):
 @pytest.mark.parametrize("expected",
                          [(16)])
 def test_get_downrate_from_settings(expected):
-    from ..RHX_realtime_reader import (parse_settings,
-                                       get_downrate_from_settings)
+    from RHX_realtime_reader import (parse_settings,
+                                     get_downrate_from_settings)
     etree = parse_settings(test_data_dir)
     downrate = get_downrate_from_settings(etree)
     assert downrate == expected
 
 
 def test_get_fileinfo():
-    from ..RHX_realtime_reader import read_info_rhd_wrapper
+    from RHX_realtime_reader import read_info_rhd_wrapper
     r = RHX_realtime_reader(recording_dir=test_data_dir, verbosity=False)
     fileinfo = read_info_rhd_wrapper(test_data_dir, verbose=False)
     assert r.fileinfo == fileinfo
@@ -48,8 +48,8 @@ def test_get_fileinfo():
 
 
 def test_read_settings():
-    from ..RHX_realtime_reader import (parse_settings,
-                                       get_downrate_from_settings)
+    from RHX_realtime_reader import (parse_settings,
+                                     get_downrate_from_settings)
     r = RHX_realtime_reader(recording_dir=test_data_dir, verbosity=False)
     downrate = get_downrate_from_settings(parse_settings(test_data_dir))
     assert r.fs_down == int(r.fs/downrate)
