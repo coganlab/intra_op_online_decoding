@@ -15,7 +15,8 @@ import tkinter as tk
 from tkinter import filedialog
 import xml.etree.ElementTree as ET
 
-from .load_intan_rhd_format.load_intan_rhd_format import read_data
+from load_intan_rhd.load_intan_rhd_format import read_data
+
 
 MICROV_CONV = 0.195
 CHUNK_LENGTH = 1  # second(s)
