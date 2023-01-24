@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import os
+import shutil
 import tkinter as tk
 from tkinter import filedialog
 import xml.etree.ElementTree as ET
@@ -23,7 +24,8 @@ CHUNK_LENGTH = 1  # second(s)
 
 
 class RHX_realtime_reader():
-    def __init__(self, recording_dir=None, chunk_len=1, verbosity=True):
+    def __init__(self, recording_dir=None, lan_dir=None, chunk_len=1,
+                 verbosity=True):
 
         self.MICROV_CONV = 0.195
         self.chunk_len = chunk_len
@@ -35,6 +37,8 @@ class RHX_realtime_reader():
             except FileNotFoundError:
                 print("No recording directory found. Please select one.")
         self.recording_dir = recording_dir
+
+        self.lan_dir = lan_dir  # for sending data to separate computer
 
         # self.info_path = self.recording_dir + '/info.rhd'
         # self.settings_path = self.recording_dir + '/settings.xml'
@@ -58,6 +62,17 @@ class RHX_realtime_reader():
             if downrate is not False:
                 self.fs_down = int(self.fs / downrate)
 
+    def copy_info_and_settings_to_LAN(self):
+        # copy info.rhd and settings.xml to lan_dir
+        if self.lan_dir is not None:
+            shutil.copy(self.recording_dir + '/info.rhd',
+                        self.lan_dir + '/info.rhd')
+            shutil.copy(self.recording_dir + '/settings.xml',
+                        self.lan_dir + '/settings.xml')
+            return True
+        print('Copying unsuccessful. No LAN directory specified.')
+        return False
+
     def get_timestamp_filesize(self):
         return int(os.path.getsize(self.ts_path) / 4)  # int32 = 4 bytes
 
@@ -69,26 +84,33 @@ class RHX_realtime_reader():
         ts = np.arange(start, start + num_samples) / self.fs_down
         return ts
 
-    def read_amp_data(self, data_fid, read_all=False):
+    def read_amp_data(self, data_fid, offset=0, read_all=False, read_len=0):
+        # read_len and offset input in seconds, converted to samples/bytes here
         if read_all:
-            read_len = -1
+            num_read = -1
         else:
-            read_len = int(self.chunk_len * self.fs_down * self.num_chan)
+            if read_len == 0:
+                read_len = self.chunk_len
 
-        d = np.fromfile(data_fid, count=read_len,
+            # convert read_len in seconds to samples
+            num_read = int(read_len * self.fs_down * self.num_chan)
+
+        # convert offset in seconds to samples and multiply by 2 to convert to
+        # bytes (int16 = 2 bytes)
+        offset_bytes = int(offset * self.fs_down * self.num_chan * 2)
+
+        d = np.fromfile(data_fid, count=num_read, offset=offset_bytes,
                         dtype=np.int16).reshape(-1, self.num_chan).T
         d = d * self.MICROV_CONV
         return d
 
     def acquire_current(self, plot=False):
-        ts_fid = open(self.ts_path, 'rb')
         data_fid = open(self.lowpass_path, 'rb')
 
         # read timestamp and amplifier data
         amp_data = self.read_amp_data(data_fid, read_all=True)
         ts = self.create_timestamp_lp(amp_data.shape[1])
 
-        ts_fid.close()
         data_fid.close()
 
         if plot:
