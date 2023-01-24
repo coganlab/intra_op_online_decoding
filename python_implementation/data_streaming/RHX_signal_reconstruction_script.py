@@ -9,7 +9,6 @@ wideband amplifier data which is not used for realtime processing.
 # %% Setup
 import numpy as np
 import matplotlib.pyplot as plt
-import shutil
 
 import RHX_realtime_reader as rhx_acq
 
@@ -51,7 +50,7 @@ with open(nd + "/lowpass.dat", "wb") as f:
 
 new_reader = rhx_acq.RHX_realtime_reader(recording_dir=nd)
 print(realtime_reader.get_data_filesize())
-(new_reader.get_data_filesize())
+print(new_reader.get_data_filesize())
 
 # %% Read in signal from new directory
 
@@ -69,4 +68,6 @@ plt.figure()
 plt.plot(new_ts, new_data[0, :])
 plt.show()
 
-# %%
+# %% Test reading in data with read_current method
+
+new_ts, new_data = new_reader.acquire_current(plot=True)

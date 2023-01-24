@@ -104,11 +104,11 @@ class RHX_realtime_reader():
         d = d * self.MICROV_CONV
         return d
 
-    def acquire_current(self, plot=False):
+    def acquire_current(self, offset=0, plot=False):
         data_fid = open(self.lowpass_path, 'rb')
 
         # read timestamp and amplifier data
-        amp_data = self.read_amp_data(data_fid, read_all=True)
+        amp_data = self.read_amp_data(data_fid, offset=offset, read_all=True)
         ts = self.create_timestamp_lp(amp_data.shape[1])
 
         data_fid.close()
