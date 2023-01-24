@@ -86,18 +86,19 @@ plt.show()
 
 # %% Test that script saves LAN data correctly
 
-ts_rd, amp_data_rd = realtime_reader.acquire_current(offset=offset_time,
-                                                     plot=False)
+ts_rd, amp_data_rd = realtime_reader.acquire_current(plot=False)
 
 lan_reader = rhx_acq.RHX_realtime_reader(recording_dir=ld)
 ts_lan, amp_data_lan = lan_reader.acquire_current(plot=False)
 
-display_time = 1.5  # seconds
+display_time = 10  # seconds
 display_samp = int(display_time * lan_reader.fs_down)
 
 plt.figure()
-plt.plot(ts_rd[:display_samp], amp_data_rd[0, :display_samp] + 50)
-plt.plot(ts_lan[:display_samp], amp_data_lan[0, :display_samp])
+plt.plot(ts_rd[:display_samp], amp_data_rd[0, :display_samp])
+plt.plot(ts_lan[:display_samp - int(offset_time*lan_reader.fs_down)] +
+         offset_time,
+         amp_data_lan[0, :display_samp - int(offset_time*lan_reader.fs_down)])
 plt.ylabel('Voltage (uV)')
 plt.xlabel('Time (s)')
 plt.show()
