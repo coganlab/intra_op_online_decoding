@@ -11,7 +11,7 @@ realtime_reader = rhx_acq.RHX_realtime_reader(recording_dir=rd)
 
 # %% Determine write interval
 
-amp_timesteps = realtime_reader.get_data_filesize()
+# amp_timesteps = realtime_reader.get_data_filesize()
 
 # write_len = 10000
 # write_times = np.zeros(write_len)
@@ -28,6 +28,7 @@ amp_timesteps = realtime_reader.get_data_filesize()
 #         write_count += 1
 #     else:
 #         time.sleep(0.001)
+
 
 # write_times = write_times[100:]
 # print(f'Average time between writes: {np.mean(write_times)}')

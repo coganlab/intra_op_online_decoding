@@ -1,8 +1,32 @@
+""" Script to test latency of streaming from Intan RHX software to recording
+directory to LAN directory. Similar to RHX_streaming_latency_script.py, but
+instead of recording delay between change in file size and time of access, for
+the recording directory, this script is meant to assist in recording the delay
+between change in file size in the recording directory and time of access in
+the LAN directory.
+    To do this, the script waits for changes to the file size of
+lowpass.dat in the recording directory and then records the time of this update
+to the file by the Intan RHX software. The script then reads this new data from
+the lowpass.dat file and saves that chunk of data to 'lowpass.dat' in the
+specified LAN directory (does not necessarily need to be a LAN-connected
+directory, but that is the purpose of this script). Over the specified number
+of iterations, the times of file updates by the RHX software in the recording
+directory are added to a numpy array and saved as a .npy file in the LAN
+directory (times are saved as timestamps from datetime.now() for a built-in
+reference point that can be used to compare times on the LAN computer).
+    Another script, RHX_LAN_collection_script.py, should be running at the same
+time as this script on another computer to determine at what times the data is
+accessible in the LAN directory. After all iterations are complete, the times
+of accessiblility can be paired with the write times from this script (saved
+as .npy file in the LAN directory) to determine the latency of streaming
+lowpass data from the RHX software to the LAN directory.
+"""
 # %% Setup
 import numpy as np
 import time
 import matplotlib.pyplot as plt
 import os
+from datetime import datetime
 
 import RHX_realtime_reader as rhx_acq
 
@@ -12,14 +36,13 @@ realtime_reader = rhx_acq.RHX_realtime_reader(recording_dir=rd, lan_dir=ld)
 
 # %% Get times of data acquisition and save new data to LAN directory
 
-write_len = 500
+write_len = 10000
 start_times = np.zeros(write_len)
 write_amount = np.zeros(write_len)
 write_count = 0
 
 data_fid = open(realtime_reader.lowpass_path, 'rb')
 amp_timesteps = realtime_reader.get_data_filesize()
-start = time.time()
 
 lan_data_name = ld + '/lowpass.dat'
 if os.path.exists(lan_data_name):
@@ -31,7 +54,7 @@ with open(lan_data_name, 'ab') as lan_fid:  # create file in LAN dir
         temp_amp_timesteps = realtime_reader.get_data_filesize()
         if temp_amp_timesteps > amp_timesteps:
             # track times since start to compare to times tracked in LAN dir
-            start_times[write_count] = time.time() - start
+            start_times[write_count] = datetime.timestamp(datetime.now())
 
             write_amount[write_count] = temp_amp_timesteps - amp_timesteps
 
@@ -63,8 +86,8 @@ realtime_reader.copy_info_and_settings_to_LAN()
 
 # %% Save array of open times to file
 
-# np.save(ld + '/open_times.npy', start_times)
-
+np.save(ld + '/open_times.npy', start_times)
+np.save(ld + '/write_amounts.npy', write_amount)
 # %%
 
 write_times = np.diff(start_times[100:])
